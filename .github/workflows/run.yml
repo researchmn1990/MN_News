@@ -2,7 +2,7 @@ name: Crawl Mongolia News
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 4,11 * * *"   # 每天12:00 和 19:00（本地时间）
   workflow_dispatch:
 
 permissions:
@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4   # ✅ 已升级
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v5   # ✅ 已升级
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
