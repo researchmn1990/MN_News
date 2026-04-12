@@ -1,3 +1,4 @@
+from translator import translate_mn_to_zh
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
