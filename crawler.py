@@ -18,6 +18,8 @@ def parse_news():
     results = []
     target_dates = get_last_7_days()
 
+    seen_links = set()  # ✅ 去重
+
     page = 1
 
     while True:
@@ -25,7 +27,10 @@ def parse_news():
         print(f"Fetching: {url}")
 
         try:
-            res = requests.get(url, timeout=10)
+            headers = {
+                "User-Agent": "Mozilla/5.0"
+            }
+            res = requests.get(url, headers=headers, timeout=10)
         except Exception as e:
             print("Request error:", e)
             break
@@ -45,16 +50,24 @@ def parse_news():
 
         for item in items:
             try:
-                # ===== 标题 + 链接 =====
-                a_tag = item.select_one("a[href*='/news/view']")
+                # ===== 标题 + 链接（精准定位）=====
+                a_tag = item.select_one("h2 a")
                 if not a_tag:
                     continue
 
                 title = a_tag.text.strip()
+                if not title:
+                    continue
+
                 link = a_tag["href"]
 
                 if link.startswith("/"):
                     link = "https://mongolia.gov.mn" + link
+
+                # ===== 去重 =====
+                if link in seen_links:
+                    continue
+                seen_links.add(link)
 
                 # ===== 日期 =====
                 time_tag = item.select_one("time.post-date")
