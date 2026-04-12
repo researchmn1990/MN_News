@@ -1,26 +1,10 @@
-from translator import translate_mn_to_zh
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import json
 import time
-import os
 
 BASE_URL = "https://mongolia.gov.mn/news/news?page={}"
-CACHE_FILE = "translation_cache.json"
-
-
-# ====== 加载翻译缓存 ======
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def save_cache(cache):
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2)
 
 
 # ====== 日期 ======
@@ -34,16 +18,20 @@ def parse_news():
     results = []
     target_dates = get_last_7_days()
 
-    translation_cache = load_cache()
-
     page = 1
 
     while True:
         url = BASE_URL.format(page)
         print(f"Fetching: {url}")
 
-        res = requests.get(url)
+        try:
+            res = requests.get(url, timeout=10)
+        except Exception as e:
+            print("Request error:", e)
+            break
+
         if res.status_code != 200:
+            print("Bad status:", res.status_code)
             break
 
         soup = BeautifulSoup(res.text, "html.parser")
@@ -57,8 +45,11 @@ def parse_news():
 
         for item in items:
             try:
-                # ===== 标题 =====
+                # ===== 标题 + 链接 =====
                 a_tag = item.select_one("a[href*='/news/view']")
+                if not a_tag:
+                    continue
+
                 title = a_tag.text.strip()
                 link = a_tag["href"]
 
@@ -67,36 +58,26 @@ def parse_news():
 
                 # ===== 日期 =====
                 time_tag = item.select_one("time.post-date")
-                datetime_str = time_tag["datetime"]
+                if not time_tag:
+                    continue
 
+                datetime_str = time_tag.get("datetime", "")
                 date = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d")
 
-                # ===== 过滤 =====
+                # ===== 过滤7天 =====
                 if date not in target_dates:
                     stop_flag = True
                     continue
 
-                # ===== 翻译（带缓存）=====
-                if title in translation_cache:
-                    zh_title = translation_cache[title]
-                else:
-                    print(f"Translating: {title[:30]}...")
-                    zh_title = translate_mn_to_zh(title)
-                    translation_cache[title] = zh_title
-
-                    # 防止API/模型压力
-                    time.sleep(0.5)
-
                 # ===== 保存 =====
                 results.append({
                     "title": title,
-                    "title_zh": zh_title,
                     "link": link,
                     "date": date
                 })
 
             except Exception as e:
-                print("Error:", e)
+                print("Parse error:", e)
 
         if stop_flag:
             break
@@ -104,7 +85,6 @@ def parse_news():
         page += 1
         time.sleep(1)
 
-    save_cache(translation_cache)
     return results
 
 
@@ -115,6 +95,9 @@ def save_data(data):
 
 
 if __name__ == "__main__":
-    news = parse_news()
-    save_data(news)
-    print(f"Saved {len(news)} records")
+    try:
+        news = parse_news()
+        save_data(news)
+        print(f"Saved {len(news)} records")
+    except Exception as e:
+        print("FATAL ERROR:", e)
