@@ -3,12 +3,13 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import json
 import time
+import re
 
 BASE_URL = "https://mongolia.gov.mn/news/news?page={}"
 
 def get_last_7_days():
     today = datetime.now()
-    return [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+    return [(today - timedelta(days=i)).strftime("%Y.%m.%d") for i in range(7)]
 
 def parse_news():
     results = []
@@ -26,20 +27,35 @@ def parse_news():
 
         soup = BeautifulSoup(res.text, "html.parser")
 
-        items = soup.select(".news-item")  # 需根据实际HTML调整
+        # ✅ 修正 selector
+        items = soup.select("div.list-item")
+
         if not items:
+            print("No items found, stop")
             break
 
         stop_flag = False
 
         for item in items:
             try:
-                title = item.select_one("h3").text.strip()
-                link = item.select_one("a")["href"]
-                date_text = item.select_one(".date").text.strip()
+                title = item.select_one("h3, h4").text.strip()
 
-                # 统一日期格式
-                date = datetime.strptime(date_text, "%Y-%m-%d").strftime("%Y-%m-%d")
+                link_tag = item.select_one("a")
+                link = link_tag["href"]
+
+                # 处理相对路径
+                if link.startswith("/"):
+                    link = "https://mongolia.gov.mn" + link
+
+                date_text = item.get_text()
+
+                # ✅ 用正则提取日期
+                match = re.search(r"\d{4}\.\d{2}\.\d{2}", date_text)
+
+                if not match:
+                    continue
+
+                date = match.group()
 
                 if date in target_dates:
                     results.append({
