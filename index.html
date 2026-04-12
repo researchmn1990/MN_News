@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>蒙古政府新闻（最近7天）</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+        }
+        .news-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        .date {
+            color: gray;
+            font-size: 12px;
+        }
+        a {
+            text-decoration: none;
+            color: #0077cc;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>蒙古政府新闻（最近7天）</h1>
+
+<div id="news-container">加载中...</div>
+
+<script>
+fetch('news.json')
+    .then(res => res.json())
+    .then(data => {
+        const container = document.getElementById('news-container');
+        container.innerHTML = '';
+
+        data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'news-item';
+
+            div.innerHTML = `
+                <div class="date">${item.date}</div>
+                <a href="${item.link}" target="_blank">${item.title}</a>
+            `;
+
+            container.appendChild(div);
+        });
+    })
+    .catch(err => {
+        document.getElementById('news-container').innerText = '加载失败';
+        console.error(err);
+    });
+</script>
+
+</body>
+</html>
