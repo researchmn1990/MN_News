@@ -1,51 +1,100 @@
+```html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>蒙古新闻（最近7天）</title>
+    <title>蒙古新闻聚合</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-            background: #f5f5f5;
+            margin: 40px;
+            background: #f5f7fa;
         }
+
         h1 {
             text-align: center;
         }
+
+        h2 {
+            margin-top: 40px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+        }
+
         .news-item {
-            background: white;
-            padding: 15px;
-            margin-bottom: 10px;
+            background: #fff;
+            padding: 12px 16px;
+            margin: 10px 0;
             border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
+
+        .news-item:hover {
+            transform: translateY(-2px);
+            transition: 0.2s;
+        }
+
         .date {
-            color: gray;
             font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
         }
+
         a {
             text-decoration: none;
-            color: #0077cc;
+            color: #2c3e50;
+            font-weight: bold;
         }
+
         a:hover {
-            text-decoration: underline;
+            color: #007bff;
+        }
+
+        .empty {
+            color: #999;
+            font-style: italic;
+            padding: 10px 0;
         }
     </style>
 </head>
+
 <body>
 
-<h1>蒙古新闻（最近7天）</h1>
+<h1>蒙古新闻</h1>
 
-<div id="news-container">加载中...</div>
+<h2>📅 当天内容（零点至当前）</h2>
+<div id="today-container">加载中...</div>
+
+<h2>🗞️ 过去7天内容</h2>
+<div id="week-container">加载中...</div>
 
 <script>
 fetch('news.json')
     .then(res => res.json())
     .then(data => {
-        const container = document.getElementById('news-container');
-        container.innerHTML = '';
+
+        const todayContainer = document.getElementById('today-container');
+        const weekContainer = document.getElementById('week-container');
+
+        todayContainer.innerHTML = '';
+        weekContainer.innerHTML = '';
+
+        const now = new Date();
+
+        // 今日零点
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        // 7天前
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+
+        // ✅ 按时间倒序（最新在前）
+        data.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         data.forEach(item => {
+            const itemDate = new Date(item.date);
+
             const div = document.createElement('div');
             div.className = 'news-item';
 
@@ -54,14 +103,32 @@ fetch('news.json')
                 <a href="${item.link}" target="_blank">${item.title}</a>
             `;
 
-            container.appendChild(div);
+            // 分类逻辑
+            if (itemDate >= todayStart) {
+                todayContainer.appendChild(div);
+            } 
+            else if (itemDate >= sevenDaysAgo) {
+                weekContainer.appendChild(div);
+            }
         });
+
+        // 空状态处理
+        if (!todayContainer.innerHTML) {
+            todayContainer.innerHTML = '<div class="empty">今天暂无新闻</div>';
+        }
+
+        if (!weekContainer.innerHTML) {
+            weekContainer.innerHTML = '<div class="empty">暂无过去7天新闻</div>';
+        }
+
     })
     .catch(err => {
-        document.getElementById('news-container').innerText = '加载失败';
+        document.getElementById('today-container').innerHTML = '<div class="empty">加载失败</div>';
+        document.getElementById('week-container').innerHTML = '<div class="empty">加载失败</div>';
         console.error(err);
     });
 </script>
 
 </body>
 </html>
+```
